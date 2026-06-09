@@ -4,6 +4,7 @@ import { Canvas } from '@react-three/fiber/native';
 import { Car } from './Car';
 import { Track } from './Track';
 import { Ocean } from './Ocean';
+import { Sky, Sun } from './Sky';
 import { ChaseCamera } from './ChaseCamera';
 import { Particles } from './Particles';
 import { VehicleInput } from '../physics/vehicle';
@@ -24,26 +25,50 @@ export function Scene({ input, onStateUpdate }: SceneProps) {
   return (
     <View style={styles.container}>
       <Canvas
-        camera={{ fov: 75, near: 0.1, far: 1000, position: [0, 5, 10] }}
-        gl={{ antialias: false }}
+        camera={{ fov: 70, near: 0.1, far: 1000, position: [0, 5, 10] }}
+        gl={{ antialias: true }}
       >
-        {/* Lighting */}
-        <ambientLight intensity={0.4} />
+        {/* Realistic Lighting Setup */}
+        <ambientLight intensity={0.3} color="#b4d7ff" />
+
+        {/* Main sun light — warm golden hour */}
         <directionalLight
-          position={[50, 80, 30]}
-          intensity={1.2}
+          position={[200, 60, -100]}
+          intensity={1.8}
+          color="#ffd599"
           castShadow
         />
-        <hemisphereLight
-          args={['#87CEEB', '#f0e68c', 0.3]}
+
+        {/* Fill light — cool blue from sky */}
+        <directionalLight
+          position={[-50, 40, 50]}
+          intensity={0.4}
+          color="#88bbff"
         />
+
+        {/* Hemisphere: sky above, ground bounce below */}
+        <hemisphereLight
+          args={['#6fb4e0', '#c2956b', 0.4]}
+        />
+
+        {/* Rim light for car silhouette */}
+        <pointLight
+          position={[0, 10, -20]}
+          intensity={0.5}
+          color="#ffffff"
+          distance={50}
+        />
+
+        {/* Sky dome */}
+        <Sky />
+        <Sun />
 
         {/* Environment */}
         <Ocean />
         <Track />
 
-        {/* Sky gradient via fog */}
-        <fog attach="fog" args={['#87CEEB', 100, 500]} />
+        {/* Atmospheric fog — distant objects fade into haze */}
+        <fog attach="fog" args={['#d4a574', 150, 500]} />
 
         {/* Player car */}
         <Car input={input} onStateUpdate={handleStateUpdate} />

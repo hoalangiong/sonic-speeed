@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, GestureResponderEvent } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { View, StyleSheet, GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { VehicleInput } from '../physics/vehicle';
 
 interface TouchControlsProps {
@@ -8,70 +8,81 @@ interface TouchControlsProps {
 
 /**
  * On-screen touch controls for racing.
+ * Uses refs to avoid stale closure issues.
  * Left side: steering (drag left/right)
  * Right bottom: gas (hold)
  * Right top: brake (hold)
  */
 export function TouchControls({ onInputChange }: TouchControlsProps) {
-  const [steer, setSteer] = useState(0);
-  const [gas, setGas] = useState(0);
-  const [brake, setBrake] = useState(0);
+  // Use refs to always have current values in callbacks
+  const inputRef = useRef<VehicleInput>({ steer: 0, gas: 0, brake: 0 });
+  const steerZoneWidth = useRef(300);
+  const onInputChangeRef = useRef(onInputChange);
+  onInputChangeRef.current = onInputChange;
+
+  const emit = useCallback(() => {
+    onInputChangeRef.current({ ...inputRef.current });
+  }, []);
+
+  // Steering
+  const handleSteerLayout = useCallback((e: LayoutChangeEvent) => {
+    steerZoneWidth.current = e.nativeEvent.layout.width;
+  }, []);
 
   const handleSteerMove = useCallback((e: GestureResponderEvent) => {
-    const { locationX, pageX } = e.nativeEvent;
-    // Map touch X position to -1..1 steering range
-    // Assuming left half of screen is steering zone
-    const width = 200; // Approximate zone width
+    const { locationX } = e.nativeEvent;
+    const width = steerZoneWidth.current;
     const center = width / 2;
     const steerValue = Math.max(-1, Math.min(1, (locationX - center) / center));
-    setSteer(steerValue);
-    onInputChange({ steer: steerValue, gas, brake });
-  }, [gas, brake, onInputChange]);
+    inputRef.current.steer = steerValue;
+    emit();
+  }, [emit]);
 
   const handleSteerEnd = useCallback(() => {
-    setSteer(0);
-    onInputChange({ steer: 0, gas, brake });
-  }, [gas, brake, onInputChange]);
+    inputRef.current.steer = 0;
+    emit();
+  }, [emit]);
 
+  // Gas
   const handleGasStart = useCallback(() => {
-    setGas(1);
-    onInputChange({ steer, gas: 1, brake });
-  }, [steer, brake, onInputChange]);
+    inputRef.current.gas = 1;
+    emit();
+  }, [emit]);
 
   const handleGasEnd = useCallback(() => {
-    setGas(0);
-    onInputChange({ steer, gas: 0, brake });
-  }, [steer, brake, onInputChange]);
+    inputRef.current.gas = 0;
+    emit();
+  }, [emit]);
 
+  // Brake
   const handleBrakeStart = useCallback(() => {
-    setBrake(1);
-    onInputChange({ steer, gas, brake: 1 });
-  }, [steer, gas, onInputChange]);
+    inputRef.current.brake = 1;
+    emit();
+  }, [emit]);
 
   const handleBrakeEnd = useCallback(() => {
-    setBrake(0);
-    onInputChange({ steer, gas, brake: 0 });
-  }, [steer, gas, onInputChange]);
+    inputRef.current.brake = 0;
+    emit();
+  }, [emit]);
 
   return (
     <View style={styles.container} pointerEvents="box-none">
       {/* Left: Steering zone */}
       <View
         style={styles.steerZone}
+        onLayout={handleSteerLayout}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={() => true}
         onResponderMove={handleSteerMove}
         onResponderRelease={handleSteerEnd}
         onResponderTerminate={handleSteerEnd}
-      >
-        <View style={[styles.steerIndicator, { left: `${50 + steer * 40}%` }]} />
-      </View>
+      />
 
       {/* Right side controls */}
       <View style={styles.rightControls}>
         {/* Brake button (top) */}
         <View
-          style={[styles.brakeButton, brake > 0 && styles.brakeActive]}
+          style={styles.brakeButton}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleBrakeStart}
           onResponderRelease={handleBrakeEnd}
@@ -80,7 +91,7 @@ export function TouchControls({ onInputChange }: TouchControlsProps) {
 
         {/* Gas button (bottom) */}
         <View
-          style={[styles.gasButton, gas > 0 && styles.gasActive]}
+          style={styles.gasButton}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleGasStart}
           onResponderRelease={handleGasEnd}
@@ -102,46 +113,28 @@ const styles = StyleSheet.create({
   },
   steerZone: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingBottom: 40,
-  },
-  steerIndicator: {
-    position: 'absolute',
-    bottom: 50,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.8)',
   },
   rightControls: {
-    width: 120,
+    width: 140,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 30,
     gap: 20,
   },
   gasButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 200, 0, 0.4)',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(0, 200, 0, 0.5)',
     borderWidth: 3,
-    borderColor: 'rgba(0, 255, 0, 0.6)',
-  },
-  gasActive: {
-    backgroundColor: 'rgba(0, 255, 0, 0.7)',
+    borderColor: 'rgba(0, 255, 0, 0.8)',
   },
   brakeButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(200, 0, 0, 0.4)',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(200, 0, 0, 0.5)',
     borderWidth: 3,
-    borderColor: 'rgba(255, 0, 0, 0.6)',
-  },
-  brakeActive: {
-    backgroundColor: 'rgba(255, 0, 0, 0.7)',
+    borderColor: 'rgba(255, 0, 0, 0.8)',
   },
 });

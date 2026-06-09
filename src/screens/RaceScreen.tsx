@@ -50,10 +50,10 @@ export function RaceScreen({ navigation, route }: Props) {
     return () => sync.stop();
   }, [mode]);
 
+  // Always accept input — no blocking. Controls should work immediately.
   const handleInputChange = useCallback((newInput: VehicleInput) => {
-    if (!raceActive && !showCountdown) return;
     setInput(newInput);
-  }, [raceActive, showCountdown]);
+  }, []);
 
   const handleStateUpdate = useCallback((state: { speed: number; position: any; steer: number; gas: number }) => {
     setSpeed(state.speed);
@@ -84,7 +84,7 @@ export function RaceScreen({ navigation, route }: Props) {
       {/* 3D Game Scene */}
       <Scene input={input} onStateUpdate={handleStateUpdate} />
 
-      {/* Touch Controls (below scene) */}
+      {/* Touch Controls */}
       <TouchControls onInputChange={handleInputChange} />
 
       {/* HUD Overlay */}

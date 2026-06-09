@@ -74,8 +74,8 @@ export function applyInput(vehicle: CANNON.RaycastVehicle, input: VehicleInput) 
   const steerAngle = input.steer * PHYSICS.MAX_STEER_ANGLE;
 
   // Apply engine force to rear wheels (RWD)
-  vehicle.applyEngineForce(-engineForce, 2);
-  vehicle.applyEngineForce(-engineForce, 3);
+  vehicle.applyEngineForce(engineForce, 2);
+  vehicle.applyEngineForce(engineForce, 3);
 
   // Apply steering to front wheels
   vehicle.setSteeringValue(steerAngle, 0);
