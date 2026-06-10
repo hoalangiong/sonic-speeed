@@ -1,5 +1,5 @@
 import * as CANNON from 'cannon-es';
-import { PHYSICS } from '../constants';
+import { PHYSICS, NITRO } from '../constants';
 
 export interface VehicleState {
   position: { x: number; y: number; z: number };
@@ -12,6 +12,7 @@ export interface VehicleInput {
   steer: number;    // -1 (left) to 1 (right)
   gas: number;      // 0 to 1
   brake: number;    // 0 to 1
+  nitro?: boolean;  // nitro boost active
 }
 
 export function createVehicle(world: CANNON.World): CANNON.RaycastVehicle {
@@ -69,7 +70,8 @@ export function createVehicle(world: CANNON.World): CANNON.RaycastVehicle {
 }
 
 export function applyInput(vehicle: CANNON.RaycastVehicle, input: VehicleInput) {
-  const engineForce = input.gas * PHYSICS.MAX_ENGINE_FORCE;
+  const forceMultiplier = input.nitro ? NITRO.FORCE_MULTIPLIER : 1;
+  const engineForce = input.gas * PHYSICS.MAX_ENGINE_FORCE * forceMultiplier;
   const brakeForce = input.brake * PHYSICS.MAX_BRAKE_FORCE;
   const steerAngle = input.steer * PHYSICS.MAX_STEER_ANGLE;
 

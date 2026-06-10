@@ -1,21 +1,20 @@
 import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet, GestureResponderEvent, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, GestureResponderEvent, LayoutChangeEvent, Text } from 'react-native';
 import { VehicleInput } from '../physics/vehicle';
 
 interface TouchControlsProps {
   onInputChange: (input: VehicleInput) => void;
+  onNitroPress?: () => void;
+  nitroAvailable?: boolean;
 }
 
 /**
  * On-screen touch controls for racing.
  * Uses refs to avoid stale closure issues.
- * Left side: steering (drag left/right)
- * Right bottom: gas (hold)
- * Right top: brake (hold)
+ * Left side: steering | Right: gas/brake/nitro
  */
-export function TouchControls({ onInputChange }: TouchControlsProps) {
-  // Use refs to always have current values in callbacks
-  const inputRef = useRef<VehicleInput>({ steer: 0, gas: 0, brake: 0 });
+export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = false }: TouchControlsProps) {
+  const inputRef = useRef<VehicleInput>({ steer: 0, gas: 0, brake: 0, nitro: false });
   const steerZoneWidth = useRef(300);
   const onInputChangeRef = useRef(onInputChange);
   onInputChangeRef.current = onInputChange;
@@ -65,6 +64,11 @@ export function TouchControls({ onInputChange }: TouchControlsProps) {
     emit();
   }, [emit]);
 
+  // Nitro
+  const handleNitroPress = useCallback(() => {
+    if (onNitroPress) onNitroPress();
+  }, [onNitroPress]);
+
   return (
     <View style={styles.container} pointerEvents="box-none">
       {/* Left: Steering zone */}
@@ -80,7 +84,16 @@ export function TouchControls({ onInputChange }: TouchControlsProps) {
 
       {/* Right side controls */}
       <View style={styles.rightControls}>
-        {/* Brake button (top) */}
+        {/* Nitro button (top) */}
+        <View
+          style={[styles.nitroButton, nitroAvailable && styles.nitroAvailable]}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleNitroPress}
+        >
+          <Text style={styles.nitroText}>N₂O</Text>
+        </View>
+
+        {/* Brake button (middle) */}
         <View
           style={styles.brakeButton}
           onStartShouldSetResponder={() => true}
@@ -115,24 +128,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rightControls: {
-    width: 140,
+    width: 130,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 30,
-    gap: 20,
+    paddingBottom: 20,
+    gap: 12,
+  },
+  nitroButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(0, 100, 200, 0.3)',
+    borderWidth: 3,
+    borderColor: 'rgba(0, 150, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nitroAvailable: {
+    backgroundColor: 'rgba(0, 150, 255, 0.6)',
+    borderColor: 'rgba(0, 200, 255, 1)',
+  },
+  nitroText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   gasButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 85,
+    height: 85,
+    borderRadius: 42,
     backgroundColor: 'rgba(0, 200, 0, 0.5)',
     borderWidth: 3,
     borderColor: 'rgba(0, 255, 0, 0.8)',
   },
   brakeButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: 'rgba(200, 0, 0, 0.5)',
     borderWidth: 3,
     borderColor: 'rgba(255, 0, 0, 0.8)',
