@@ -5,6 +5,7 @@ import { RootStackParamList } from '../navigation';
 import { Scene } from '../game/Scene';
 import { TouchControls } from '../input/TouchControls';
 import { HUD } from '../ui/HUD';
+import { Minimap } from '../ui/Minimap';
 import { Countdown } from '../ui/Countdown';
 import { VehicleInput } from '../physics/vehicle';
 import { NetworkSync, PlayerState } from '../network/sync';
@@ -206,7 +207,10 @@ export function RaceScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       {/* 3D Game Scene */}
-      <Scene input={input} map={map} onStateUpdate={handleStateUpdate} />
+      <Scene input={input} map={map} nitroActive={nitroActive} onStateUpdate={handleStateUpdate} />
+
+      {/* Minimap */}
+      <Minimap playerPosition={carPosition.current} aiCount={3} />
 
       {/* Touch Controls */}
       <TouchControls

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { Car } from './Car';
@@ -7,6 +7,8 @@ import { Ocean } from './Ocean';
 import { Sky, Sun } from './Sky';
 import { ChaseCamera } from './ChaseCamera';
 import { Particles } from './Particles';
+import { SpeedLines } from './SpeedLines';
+import { AIOpponent, getAITrackPoints } from './AIOpponent';
 import { VehicleInput } from '../physics/vehicle';
 import { MapId } from '../screens/MapSelectScreen';
 import { TokyoNightEnvironment, TokyoLighting } from './environments/TokyoNight';
@@ -16,11 +18,14 @@ import { SnowEnvironment, SnowLighting } from './environments/Snow';
 interface SceneProps {
   input: VehicleInput;
   map?: MapId;
+  nitroActive?: boolean;
   onStateUpdate?: (state: { speed: number; position: any; steer: number; gas: number }) => void;
 }
 
-export function Scene({ input, map = 'coastal', onStateUpdate }: SceneProps) {
+export function Scene({ input, map = 'coastal', nitroActive = false, onStateUpdate }: SceneProps) {
   const [particleState, setParticleState] = useState({ speed: 0, gas: 0, steer: 0 });
+
+  const trackPoints = useMemo(() => getAITrackPoints(), []);
 
   const handleStateUpdate = (state: { speed: number; position: any; steer: number; gas: number }) => {
     setParticleState({ speed: state.speed, gas: state.gas, steer: state.steer });
@@ -36,11 +41,16 @@ export function Scene({ input, map = 'coastal', onStateUpdate }: SceneProps) {
         {/* Environment-specific lighting + scenery */}
         <EnvironmentRenderer map={map} />
 
-        {/* Track (same road shape, different ground handled by environment) */}
+        {/* Track */}
         <Track />
 
         {/* Player car */}
         <Car input={input} onStateUpdate={handleStateUpdate} />
+
+        {/* AI Opponents — 3 bots */}
+        <AIOpponent index={0} trackPoints={trackPoints} speedFactor={0.85} />
+        <AIOpponent index={1} trackPoints={trackPoints} speedFactor={0.95} />
+        <AIOpponent index={2} trackPoints={trackPoints} speedFactor={1.05} />
 
         {/* Particle effects */}
         <Particles
@@ -48,6 +58,9 @@ export function Scene({ input, map = 'coastal', onStateUpdate }: SceneProps) {
           gas={particleState.gas}
           steer={particleState.steer}
         />
+
+        {/* Speed lines at high velocity */}
+        <SpeedLines speed={particleState.speed} nitroActive={nitroActive} />
 
         {/* Chase camera */}
         <ChaseCamera />
@@ -86,13 +99,11 @@ function EnvironmentRenderer({ map }: { map: MapId }) {
     default:
       return (
         <>
-          {/* Coastal lighting */}
           <ambientLight intensity={0.3} color="#b4d7ff" />
           <directionalLight position={[200, 60, -100]} intensity={1.8} color="#ffd599" castShadow />
           <directionalLight position={[-50, 40, 50]} intensity={0.4} color="#88bbff" />
           <hemisphereLight args={['#6fb4e0', '#c2956b', 0.4]} />
           <pointLight position={[0, 10, -20]} intensity={0.5} color="#ffffff" distance={50} />
-          {/* Coastal environment */}
           <Sky />
           <Sun />
           <Ocean />
