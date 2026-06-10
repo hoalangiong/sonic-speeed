@@ -107,6 +107,9 @@ export function Track() {
 
       {/* Scenery */}
       <TrackScenery />
+
+      {/* Coastal mountains/cliffs */}
+      <CoastalMountains />
     </group>
   );
 }
@@ -248,18 +251,95 @@ function PalmTree({ position, seed }: { position: [number, number, number]; seed
   );
 }
 
-/** Generate coastal track loop points */
+/** Coastal mountains and cliffs — green mountainside with rocky cliffs */
+function CoastalMountains() {
+  const mountains = useMemo(() => {
+    const items: Array<{
+      pos: [number, number, number];
+      scale: [number, number, number];
+      rotation: [number, number, number];
+      color: string;
+    }> = [];
+
+    // Large mountain range on inner side of track (like photo — road hugs mountain)
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const radius = 30 + Math.sin(i * 2.1) * 10; // Inner side, close to road
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const height = 15 + Math.random() * 25;
+      const width = 10 + Math.random() * 15;
+
+      items.push({
+        pos: [x, height * 0.4, z],
+        scale: [width, height, width * 0.8],
+        rotation: [0, angle + Math.random() * 0.5, 0],
+        color: i % 3 === 0 ? '#2d5a27' : i % 3 === 1 ? '#3d6b35' : '#1e4a1e',
+      });
+    }
+
+    // Cliff faces — rocky brown/grey outcrops
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2 + 0.2;
+      const radius = 35 + Math.sin(i * 3) * 8;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+
+      items.push({
+        pos: [x, 3 + Math.random() * 5, z],
+        scale: [5 + Math.random() * 4, 8 + Math.random() * 10, 4 + Math.random() * 3],
+        rotation: [Math.random() * 0.2, angle, Math.random() * 0.1],
+        color: i % 2 === 0 ? '#6b5e4f' : '#7a6b5a',
+      });
+    }
+
+    return items;
+  }, []);
+
+  return (
+    <group>
+      {mountains.map((m, i) => (
+        <mesh key={`mt-${i}`} position={m.pos} scale={m.scale} rotation={m.rotation}>
+          <coneGeometry args={[0.6, 1, 6]} />
+          <meshStandardMaterial
+            color={m.color}
+            roughness={0.9}
+            metalness={0}
+            flatShading
+          />
+        </mesh>
+      ))}
+
+      {/* Distant mountain backdrop — far away large peaks */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const angle = (i / 5) * Math.PI * 2;
+        const x = Math.cos(angle) * 200;
+        const z = Math.sin(angle) * 200;
+        return (
+          <mesh key={`bg-mt-${i}`} position={[x, 20, z]} scale={[60, 50 + i * 10, 40]}>
+            <coneGeometry args={[0.5, 1, 5]} />
+            <meshStandardMaterial color="#1a3d1a" roughness={1} flatShading />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Generate coastal cliff road points — winding road along mountain coast */
 function getTrackPoints(): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
-  const numPoints = 20;
+  const numPoints = 24;
 
   for (let i = 0; i < numPoints; i++) {
     const angle = (i / numPoints) * Math.PI * 2;
-    const rx = 60 + Math.sin(angle * 3) * 15;
-    const rz = 45 + Math.cos(angle * 2) * 10;
+    // Irregular coastal road shape — closer to mountain on one side
+    const rx = 70 + Math.sin(angle * 2) * 20 + Math.cos(angle * 5) * 8;
+    const rz = 55 + Math.cos(angle * 3) * 15 + Math.sin(angle * 4) * 5;
     const x = Math.cos(angle) * rx;
     const z = Math.sin(angle) * rz;
-    const y = Math.sin(angle * 4) * 0.3;
+    // Elevation — road climbs and descends along cliff
+    const y = Math.sin(angle * 2) * 3 + Math.cos(angle * 3) * 1.5;
     points.push(new THREE.Vector3(x, y, z));
   }
 
