@@ -3,11 +3,11 @@ import * as THREE from 'three';
 import { TRACK } from '../constants';
 
 /**
- * Coastal racing track — procedural loop circuit.
- * Realistic asphalt road, metal barriers, rich scenery.
+ * Drive X style track — long highway with gentle curves,
+ * 2 lanes, yellow center line, white edge lines, trees + poles.
  */
 export function Track() {
-  const { roadMesh, barrierLeftMesh, barrierRightMesh, groundMesh } = useMemo(() => {
+  const { roadGeo, groundGeo } = useMemo(() => {
     const trackPoints = getTrackPoints();
     const curve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.5);
 
@@ -16,130 +16,99 @@ export function Track() {
     const halfWidth = TRACK.WIDTH / 2;
     roadShape.moveTo(-halfWidth, 0);
     roadShape.lineTo(halfWidth, 0);
-    roadShape.lineTo(halfWidth, 0.15);
-    roadShape.lineTo(-halfWidth, 0.15);
+    roadShape.lineTo(halfWidth, 0.12);
+    roadShape.lineTo(-halfWidth, 0.12);
     roadShape.closePath();
 
     const roadGeo = new THREE.ExtrudeGeometry(roadShape, {
-      steps: 200,
+      steps: 300,
       bevelEnabled: false,
       extrudePath: curve,
     });
 
-    // Barriers
-    const barrierShape = new THREE.Shape();
-    barrierShape.moveTo(0, 0);
-    barrierShape.lineTo(0.3, 0);
-    barrierShape.lineTo(0.3, TRACK.BARRIER_HEIGHT);
-    barrierShape.lineTo(0, TRACK.BARRIER_HEIGHT);
-    barrierShape.closePath();
-
-    const leftBarrierPoints: THREE.Vector3[] = [];
-    const rightBarrierPoints: THREE.Vector3[] = [];
-    const numSamples = 200;
-
-    for (let i = 0; i <= numSamples; i++) {
-      const t = i / numSamples;
-      const point = curve.getPointAt(t);
-      const tangent = curve.getTangentAt(t);
-      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-
-      leftBarrierPoints.push(point.clone().add(normal.clone().multiplyScalar(halfWidth + 0.5)));
-      rightBarrierPoints.push(point.clone().add(normal.clone().multiplyScalar(-(halfWidth + 0.5))));
-    }
-
-    const leftCurve = new THREE.CatmullRomCurve3(leftBarrierPoints, true);
-    const rightCurve = new THREE.CatmullRomCurve3(rightBarrierPoints, true);
-
-    const leftBarrierGeo = new THREE.ExtrudeGeometry(barrierShape, {
-      steps: 200,
-      bevelEnabled: false,
-      extrudePath: leftCurve,
-    });
-    const rightBarrierGeo = new THREE.ExtrudeGeometry(barrierShape, {
-      steps: 200,
-      bevelEnabled: false,
-      extrudePath: rightCurve,
-    });
-
-    // Beach/ground
-    const groundGeo = new THREE.PlaneGeometry(500, 500, 32, 32);
+    const groundGeo = new THREE.PlaneGeometry(600, 600, 16, 16);
     groundGeo.rotateX(-Math.PI / 2);
 
-    return {
-      roadMesh: roadGeo,
-      barrierLeftMesh: leftBarrierGeo,
-      barrierRightMesh: rightBarrierGeo,
-      groundMesh: groundGeo,
-    };
+    return { roadGeo, groundGeo };
   }, []);
 
   return (
     <group>
-      {/* Sandy beach ground */}
-      <mesh geometry={groundMesh} position={[0, -0.05, 0]}>
-        <meshStandardMaterial
-          color="#c2956b"
-          roughness={0.95}
-          metalness={0}
-        />
+      {/* Ground — grass/dirt */}
+      <mesh geometry={groundGeo} position={[0, -0.1, 0]}>
+        <meshStandardMaterial color="#4a7a3a" roughness={0.95} metalness={0} />
       </mesh>
 
-      {/* Asphalt road — dark with slight sheen */}
-      <mesh geometry={roadMesh} position={[0, 0, 0]}>
-        <meshStandardMaterial
-          color="#2a2a2a"
-          roughness={0.7}
-          metalness={0.05}
-        />
+      {/* Road — dark asphalt */}
+      <mesh geometry={roadGeo}>
+        <meshStandardMaterial color="#3a3a3a" roughness={0.65} metalness={0.05} />
       </mesh>
 
-      {/* Road center line */}
+      {/* Road markings */}
       <RoadMarkings />
 
-      {/* Metal barriers — realistic silver/red */}
-      <mesh geometry={barrierLeftMesh}>
-        <meshStandardMaterial color="#cc2222" metalness={0.6} roughness={0.4} />
-      </mesh>
-      <mesh geometry={barrierRightMesh}>
-        <meshStandardMaterial color="#dddddd" metalness={0.7} roughness={0.3} />
-      </mesh>
-
-      {/* Scenery */}
-      <TrackScenery />
-
-      {/* Coastal mountains/cliffs */}
-      <CoastalMountains />
+      {/* Roadside scenery — trees, poles, barriers */}
+      <RoadsideScenery />
     </group>
   );
 }
 
-/** Road markings — dashed center line */
+/** Road markings — yellow center dashes + white edge lines */
 function RoadMarkings() {
-  const marks = useMemo(() => {
+  const { centerMarks, edgeMarksLeft, edgeMarksRight } = useMemo(() => {
     const trackPoints = getTrackPoints();
     const curve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.5);
-    const positions: Array<{ pos: THREE.Vector3; rot: number }> = [];
+    const halfWidth = TRACK.WIDTH / 2;
 
-    for (let i = 0; i < 60; i++) {
-      const t = i / 60;
+    const center: Array<{ pos: THREE.Vector3; rot: number }> = [];
+    const left: Array<{ pos: THREE.Vector3; rot: number }> = [];
+    const right: Array<{ pos: THREE.Vector3; rot: number }> = [];
+
+    const numMarks = 120;
+    for (let i = 0; i < numMarks; i++) {
+      const t = i / numMarks;
       const point = curve.getPointAt(t);
       const tangent = curve.getTangentAt(t);
       const angle = Math.atan2(tangent.x, tangent.z);
-      positions.push({ pos: point, rot: angle });
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+      // Center dashes (every other)
+      if (i % 2 === 0) {
+        center.push({ pos: point.clone(), rot: angle });
+      }
+
+      // Edge lines (continuous)
+      const leftPos = point.clone().add(normal.clone().multiplyScalar(halfWidth - 0.3));
+      const rightPos = point.clone().add(normal.clone().multiplyScalar(-(halfWidth - 0.3)));
+      left.push({ pos: leftPos, rot: angle });
+      right.push({ pos: rightPos, rot: angle });
     }
-    return positions;
+
+    return { centerMarks: center, edgeMarksLeft: left, edgeMarksRight: right };
   }, []);
 
   return (
     <group>
-      {marks.map((mark, i) => (
-        <mesh
-          key={i}
-          position={[mark.pos.x, 0.16, mark.pos.z]}
-          rotation={[0, mark.rot, 0]}
-        >
-          <boxGeometry args={[0.2, 0.02, 2]} />
+      {/* Yellow center dashes */}
+      {centerMarks.map((m, i) => (
+        <mesh key={`c-${i}`} position={[m.pos.x, 0.13, m.pos.z]} rotation={[0, m.rot, 0]}>
+          <boxGeometry args={[0.15, 0.02, 2.5]} />
+          <meshStandardMaterial color="#ddaa00" emissive="#ddaa00" emissiveIntensity={0.2} />
+        </mesh>
+      ))}
+
+      {/* White left edge line */}
+      {edgeMarksLeft.map((m, i) => (
+        <mesh key={`l-${i}`} position={[m.pos.x, 0.13, m.pos.z]} rotation={[0, m.rot, 0]}>
+          <boxGeometry args={[0.12, 0.02, 2.8]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
+        </mesh>
+      ))}
+
+      {/* White right edge line */}
+      {edgeMarksRight.map((m, i) => (
+        <mesh key={`r-${i}`} position={[m.pos.x, 0.13, m.pos.z]} rotation={[0, m.rot, 0]}>
+          <boxGeometry args={[0.12, 0.02, 2.8]} />
           <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.1} />
         </mesh>
       ))}
@@ -147,150 +116,110 @@ function RoadMarkings() {
   );
 }
 
-/** Rich coastal scenery — palm trees, rocks, grass patches */
-function TrackScenery() {
-  const { trees, rocks, grass } = useMemo(() => {
-    const treePositions: Array<[number, number, number]> = [];
-    const rockPositions: Array<{ pos: [number, number, number]; scale: number }> = [];
-    const grassPositions: Array<[number, number, number]> = [];
+/** Roadside scenery — trees, power poles, guardrails */
+function RoadsideScenery() {
+  const { trees, poles } = useMemo(() => {
+    const trackPoints = getTrackPoints();
+    const curve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.5);
+    const halfWidth = TRACK.WIDTH / 2;
 
-    // Palm trees — scattered outside track
-    for (let i = 0; i < 40; i++) {
-      const angle = (i / 40) * Math.PI * 2;
-      const radius = 75 + Math.sin(i * 1.7) * 20 + Math.random() * 15;
-      treePositions.push([
-        Math.cos(angle) * radius,
-        0,
-        Math.sin(angle) * radius,
-      ]);
-    }
+    const treeItems: Array<{ pos: [number, number, number]; height: number; side: number }> = [];
+    const poleItems: Array<{ pos: [number, number, number]; rot: number }> = [];
 
-    // Rocks along coastline
-    for (let i = 0; i < 20; i++) {
-      const angle = (i / 20) * Math.PI * 2 + 0.3;
-      const radius = 100 + Math.random() * 40;
-      rockPositions.push({
-        pos: [Math.cos(angle) * radius, 0, Math.sin(angle) * radius],
-        scale: 0.5 + Math.random() * 2,
+    // Trees along both sides
+    for (let i = 0; i < 60; i++) {
+      const t = i / 60;
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t);
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+
+      const side = i % 2 === 0 ? 1 : -1;
+      const offset = halfWidth + 3 + Math.random() * 5;
+      const treePos = point.clone().add(normal.clone().multiplyScalar(side * offset));
+
+      treeItems.push({
+        pos: [treePos.x, 0, treePos.z],
+        height: 5 + Math.random() * 4,
+        side,
       });
     }
 
-    // Grass patches near road
-    for (let i = 0; i < 25; i++) {
-      const angle = (i / 25) * Math.PI * 2 + 0.5;
-      const radius = 68 + Math.random() * 5;
-      grassPositions.push([
-        Math.cos(angle) * radius,
-        0,
-        Math.sin(angle) * radius,
-      ]);
+    // Power poles — right side every ~8 segments
+    for (let i = 0; i < 20; i++) {
+      const t = i / 20;
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t);
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+      const angle = Math.atan2(tangent.x, tangent.z);
+
+      const polePos = point.clone().add(normal.clone().multiplyScalar(-(halfWidth + 2)));
+      poleItems.push({ pos: [polePos.x, 0, polePos.z], rot: angle });
     }
 
-    return { trees: treePositions, rocks: rockPositions, grass: grassPositions };
+    return { trees: treeItems, poles: poleItems };
   }, []);
 
   return (
     <group>
-      {/* Palm trees */}
-      {trees.map((pos, i) => (
-        <PalmTree key={`tree-${i}`} position={pos} seed={i} />
+      {/* Trees — green rounded canopy */}
+      {trees.map((t, i) => (
+        <group key={`tree-${i}`} position={t.pos}>
+          <mesh position={[0, t.height / 2, 0]}>
+            <cylinderGeometry args={[0.15, 0.2, t.height, 6]} />
+            <meshStandardMaterial color="#4a3520" roughness={0.9} />
+          </mesh>
+          <mesh position={[0, t.height + 1, 0]}>
+            <sphereGeometry args={[1.5 + Math.random(), 8, 6]} />
+            <meshStandardMaterial color="#2d6b2d" roughness={0.8} />
+          </mesh>
+        </group>
       ))}
 
-      {/* Rocks */}
-      {rocks.map((rock, i) => (
-        <mesh key={`rock-${i}`} position={rock.pos} scale={rock.scale}>
-          <dodecahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color="#666655" roughness={0.9} metalness={0} />
-        </mesh>
+      {/* Power poles */}
+      {poles.map((p, i) => (
+        <group key={`pole-${i}`} position={p.pos}>
+          {/* Vertical pole */}
+          <mesh position={[0, 5, 0]}>
+            <cylinderGeometry args={[0.08, 0.1, 10, 6]} />
+            <meshStandardMaterial color="#555555" metalness={0.5} roughness={0.6} />
+          </mesh>
+          {/* Cross arm */}
+          <mesh position={[0, 9.5, 0]} rotation={[0, p.rot, 0]}>
+            <boxGeometry args={[3, 0.1, 0.1]} />
+            <meshStandardMaterial color="#444444" />
+          </mesh>
+          {/* Wires (simplified) */}
+          <mesh position={[0, 9.3, 0]} rotation={[0, p.rot, 0]}>
+            <boxGeometry args={[0.02, 0.02, 15]} />
+            <meshStandardMaterial color="#222222" />
+          </mesh>
+        </group>
       ))}
 
-      {/* Grass patches */}
-      {grass.map((pos, i) => (
-        <mesh key={`grass-${i}`} position={pos}>
-          <coneGeometry args={[1.5, 0.8, 6]} />
-          <meshStandardMaterial color="#3d6b35" roughness={1} />
-        </mesh>
-      ))}
+      {/* Metal guardrails along road */}
+      <GuardRails />
     </group>
   );
 }
 
-/** Realistic palm tree with curved trunk + leaf fronds */
-function PalmTree({ position, seed }: { position: [number, number, number]; seed: number }) {
-  const height = 5 + (seed % 4);
-  const lean = (seed % 3) * 0.1;
+/** Metal guardrails — silver rails on both sides */
+function GuardRails() {
+  const rails = useMemo(() => {
+    const trackPoints = getTrackPoints();
+    const curve = new THREE.CatmullRomCurve3(trackPoints, true, 'catmullrom', 0.5);
+    const halfWidth = TRACK.WIDTH / 2;
 
-  return (
-    <group position={position}>
-      {/* Trunk — slightly curved */}
-      <mesh position={[lean * 2, height / 2, 0]} rotation={[0, 0, lean]}>
-        <cylinderGeometry args={[0.15, 0.25, height, 8]} />
-        <meshStandardMaterial color="#5c3a1e" roughness={0.95} />
-      </mesh>
-      {/* Coconut cluster */}
-      <mesh position={[lean * 3, height - 0.3, 0]}>
-        <sphereGeometry args={[0.25, 6, 6]} />
-        <meshStandardMaterial color="#4a3520" roughness={0.8} />
-      </mesh>
-      {/* Leaf fronds — multiple elongated cones */}
-      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-        <mesh
-          key={i}
-          position={[
-            lean * 3 + Math.cos((angle * Math.PI) / 180) * 1.5,
-            height + 0.5,
-            Math.sin((angle * Math.PI) / 180) * 1.5,
-          ]}
-          rotation={[0.8, (angle * Math.PI) / 180, 0.3]}
-        >
-          <coneGeometry args={[0.6, 3, 4]} />
-          <meshStandardMaterial color="#1e5e1e" roughness={0.8} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
+    const items: Array<{ pos: [number, number, number]; rot: number }> = [];
 
-/** Coastal mountains and cliffs — green mountainside with rocky cliffs */
-function CoastalMountains() {
-  const mountains = useMemo(() => {
-    const items: Array<{
-      pos: [number, number, number];
-      scale: [number, number, number];
-      rotation: [number, number, number];
-      color: string;
-    }> = [];
+    for (let i = 0; i < 80; i++) {
+      const t = i / 80;
+      const point = curve.getPointAt(t);
+      const tangent = curve.getTangentAt(t);
+      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
+      const angle = Math.atan2(tangent.x, tangent.z);
 
-    // Large mountain range on inner side of track (like photo — road hugs mountain)
-    for (let i = 0; i < 16; i++) {
-      const angle = (i / 16) * Math.PI * 2;
-      const radius = 30 + Math.sin(i * 2.1) * 10; // Inner side, close to road
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      const height = 15 + Math.random() * 25;
-      const width = 10 + Math.random() * 15;
-
-      items.push({
-        pos: [x, height * 0.4, z],
-        scale: [width, height, width * 0.8],
-        rotation: [0, angle + Math.random() * 0.5, 0],
-        color: i % 3 === 0 ? '#2d5a27' : i % 3 === 1 ? '#3d6b35' : '#1e4a1e',
-      });
-    }
-
-    // Cliff faces — rocky brown/grey outcrops
-    for (let i = 0; i < 12; i++) {
-      const angle = (i / 12) * Math.PI * 2 + 0.2;
-      const radius = 35 + Math.sin(i * 3) * 8;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-
-      items.push({
-        pos: [x, 3 + Math.random() * 5, z],
-        scale: [5 + Math.random() * 4, 8 + Math.random() * 10, 4 + Math.random() * 3],
-        rotation: [Math.random() * 0.2, angle, Math.random() * 0.1],
-        color: i % 2 === 0 ? '#6b5e4f' : '#7a6b5a',
-      });
+      const leftPos = point.clone().add(normal.clone().multiplyScalar(halfWidth + 0.3));
+      items.push({ pos: [leftPos.x, 0.4, leftPos.z], rot: angle });
     }
 
     return items;
@@ -298,50 +227,41 @@ function CoastalMountains() {
 
   return (
     <group>
-      {mountains.map((m, i) => (
-        <mesh key={`mt-${i}`} position={m.pos} scale={m.scale} rotation={m.rotation}>
-          <coneGeometry args={[0.6, 1, 6]} />
-          <meshStandardMaterial
-            color={m.color}
-            roughness={0.9}
-            metalness={0}
-            flatShading
-          />
+      {rails.map((r, i) => (
+        <mesh key={`rail-${i}`} position={r.pos} rotation={[0, r.rot, 0]}>
+          <boxGeometry args={[0.05, 0.6, 4]} />
+          <meshStandardMaterial color="#aaaaaa" metalness={0.7} roughness={0.3} />
         </mesh>
       ))}
-
-      {/* Distant mountain backdrop — far away large peaks */}
-      {[0, 1, 2, 3, 4].map((i) => {
-        const angle = (i / 5) * Math.PI * 2;
-        const x = Math.cos(angle) * 200;
-        const z = Math.sin(angle) * 200;
-        return (
-          <mesh key={`bg-mt-${i}`} position={[x, 20, z]} scale={[60, 50 + i * 10, 40]}>
-            <coneGeometry args={[0.5, 1, 5]} />
-            <meshStandardMaterial color="#1a3d1a" roughness={1} flatShading />
-          </mesh>
-        );
-      })}
     </group>
   );
 }
 
-/** Generate coastal cliff road points — winding road along mountain coast */
+/**
+ * Generate Drive X style track — long highway with gentle curves.
+ * NOT a tight oval — wide sweeping bends like a real highway.
+ */
 function getTrackPoints(): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
-  const numPoints = 24;
+  const numPoints = 32;
 
   for (let i = 0; i < numPoints; i++) {
-    const angle = (i / numPoints) * Math.PI * 2;
-    // Irregular coastal road shape — closer to mountain on one side
-    const rx = 70 + Math.sin(angle * 2) * 20 + Math.cos(angle * 5) * 8;
-    const rz = 55 + Math.cos(angle * 3) * 15 + Math.sin(angle * 4) * 5;
+    const t = i / numPoints;
+    const angle = t * Math.PI * 2;
+
+    // Large elongated shape — more like a highway loop
+    const rx = 120 + Math.sin(angle * 2) * 30;
+    const rz = 80 + Math.cos(angle * 3) * 20;
     const x = Math.cos(angle) * rx;
     const z = Math.sin(angle) * rz;
-    // Elevation — road climbs and descends along cliff
-    const y = Math.sin(angle * 2) * 3 + Math.cos(angle * 3) * 1.5;
+    // Flat — no elevation changes (highway style)
+    const y = 0;
+
     points.push(new THREE.Vector3(x, y, z));
   }
 
   return points;
 }
+
+// Export for AI opponents
+export { getTrackPoints };

@@ -98,19 +98,22 @@ export function AIOpponent({ index, trackPoints, speedFactor }: AIOpponentProps)
 }
 
 /**
- * Get track points for AI path (same as track generation).
+ * Get track points for AI path — matches Drive X highway style in Track.tsx.
  */
 export function getAITrackPoints(): THREE.Vector3[] {
   const points: THREE.Vector3[] = [];
-  const numPoints = 24;
+  const numPoints = 32;
 
   for (let i = 0; i < numPoints; i++) {
-    const angle = (i / numPoints) * Math.PI * 2;
-    const rx = 70 + Math.sin(angle * 2) * 20 + Math.cos(angle * 5) * 8;
-    const rz = 55 + Math.cos(angle * 3) * 15 + Math.sin(angle * 4) * 5;
+    const t = i / numPoints;
+    const angle = t * Math.PI * 2;
+
+    const rx = 120 + Math.sin(angle * 2) * 30;
+    const rz = 80 + Math.cos(angle * 3) * 20;
     const x = Math.cos(angle) * rx;
     const z = Math.sin(angle) * rz;
-    const y = Math.sin(angle * 2) * 3 + Math.cos(angle * 3) * 1.5;
+    const y = 0;
+
     points.push(new THREE.Vector3(x, y, z));
   }
 

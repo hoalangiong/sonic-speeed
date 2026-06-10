@@ -126,13 +126,20 @@ function TokyoNeonLights() {
   );
 }
 
-/** Lighting for Tokyo Night */
+/** Lighting for Tokyo Night — brighter so road is visible */
 export function TokyoLighting() {
   return (
     <group>
-      <ambientLight intensity={0.15} color="#2233aa" />
-      <directionalLight position={[0, 50, 0]} intensity={0.2} color="#6666aa" />
-      <pointLight position={[0, 20, 0]} intensity={0.5} color="#ff66aa" distance={100} />
+      <ambientLight intensity={0.4} color="#4455aa" />
+      <directionalLight position={[0, 50, 0]} intensity={0.5} color="#8888cc" />
+      {/* Street lights along road — illuminate the road surface */}
+      <pointLight position={[0, 12, 0]} intensity={1.5} color="#ffaa66" distance={80} />
+      <pointLight position={[50, 12, 30]} intensity={1} color="#ffaa66" distance={60} />
+      <pointLight position={[-50, 12, -30]} intensity={1} color="#ffaa66" distance={60} />
+      <pointLight position={[80, 12, -50]} intensity={1} color="#ffaa66" distance={60} />
+      <pointLight position={[-80, 12, 50]} intensity={1} color="#ffaa66" distance={60} />
+      {/* Moon */}
+      <directionalLight position={[100, 80, -50]} intensity={0.3} color="#aabbff" />
     </group>
   );
 }

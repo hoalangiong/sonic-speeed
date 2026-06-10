@@ -15,11 +15,11 @@ import { MapId } from './MapSelectScreen';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Race'>;
 
-/** Checkpoint positions around the track (matching getTrackPoints in Track.tsx) */
+/** Checkpoint positions around the track (matching Drive X highway in Track.tsx) */
 const CHECKPOINTS = Array.from({ length: 8 }, (_, i) => {
   const angle = (i / 8) * Math.PI * 2;
-  const rx = 70 + Math.sin(angle * 2) * 20;
-  const rz = 55 + Math.cos(angle * 3) * 15;
+  const rx = 120 + Math.sin(angle * 2) * 30;
+  const rz = 80 + Math.cos(angle * 3) * 20;
   return { x: Math.cos(angle) * rx, z: Math.sin(angle) * rz };
 });
 
