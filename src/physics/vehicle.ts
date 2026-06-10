@@ -71,9 +71,31 @@ export function createVehicle(world: CANNON.World): CANNON.RaycastVehicle {
 
 export function applyInput(vehicle: CANNON.RaycastVehicle, input: VehicleInput) {
   const forceMultiplier = input.nitro ? NITRO.FORCE_MULTIPLIER : 1;
-  const engineForce = input.gas * PHYSICS.MAX_ENGINE_FORCE * forceMultiplier;
-  const brakeForce = input.brake * PHYSICS.MAX_BRAKE_FORCE;
   const steerAngle = input.steer * PHYSICS.MAX_STEER_ANGLE;
+
+  // Determine if reversing: brake pressed and car is slow/stopped
+  const vel = vehicle.chassisBody.velocity;
+  const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+  const isReversing = input.brake > 0 && speed < 3;
+
+  let engineForce = 0;
+  let brakeForce = 0;
+
+  if (input.gas > 0) {
+    // Forward
+    engineForce = input.gas * PHYSICS.MAX_ENGINE_FORCE * forceMultiplier;
+    brakeForce = 0;
+  } else if (input.brake > 0) {
+    if (isReversing) {
+      // Reverse — apply negative engine force
+      engineForce = -input.brake * PHYSICS.MAX_ENGINE_FORCE * 0.4; // 40% power in reverse
+      brakeForce = 0;
+    } else {
+      // Braking while moving forward
+      engineForce = 0;
+      brakeForce = input.brake * PHYSICS.MAX_BRAKE_FORCE;
+    }
+  }
 
   // Apply engine force to rear wheels (RWD)
   vehicle.applyEngineForce(engineForce, 2);

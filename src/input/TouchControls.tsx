@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet, GestureResponderEvent, LayoutChangeEvent, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { VehicleInput } from '../physics/vehicle';
 
 interface TouchControlsProps {
@@ -9,13 +9,13 @@ interface TouchControlsProps {
 }
 
 /**
- * On-screen touch controls for racing.
- * Uses refs to avoid stale closure issues.
- * Left side: steering | Right: gas/brake/nitro
+ * D-Pad style controls:
+ * LEFT SIDE: ← → arrows for steering
+ * RIGHT SIDE: ↑ gas, ↓ reverse/brake
+ * CENTER-RIGHT: N₂O nitro button
  */
 export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = false }: TouchControlsProps) {
   const inputRef = useRef<VehicleInput>({ steer: 0, gas: 0, brake: 0, nitro: false });
-  const steerZoneWidth = useRef(300);
   const onInputChangeRef = useRef(onInputChange);
   onInputChangeRef.current = onInputChange;
 
@@ -23,28 +23,31 @@ export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = fa
     onInputChangeRef.current({ ...inputRef.current });
   }, []);
 
-  // Steering
-  const handleSteerLayout = useCallback((e: LayoutChangeEvent) => {
-    steerZoneWidth.current = e.nativeEvent.layout.width;
-  }, []);
-
-  const handleSteerMove = useCallback((e: GestureResponderEvent) => {
-    const { locationX } = e.nativeEvent;
-    const width = steerZoneWidth.current;
-    const center = width / 2;
-    const steerValue = Math.max(-1, Math.min(1, (locationX - center) / center));
-    inputRef.current.steer = steerValue;
+  // === LEFT: Steering ===
+  const handleLeftStart = useCallback(() => {
+    inputRef.current.steer = -1;
     emit();
   }, [emit]);
 
-  const handleSteerEnd = useCallback(() => {
+  const handleLeftEnd = useCallback(() => {
     inputRef.current.steer = 0;
     emit();
   }, [emit]);
 
-  // Gas
+  const handleRightStart = useCallback(() => {
+    inputRef.current.steer = 1;
+    emit();
+  }, [emit]);
+
+  const handleRightEnd = useCallback(() => {
+    inputRef.current.steer = 0;
+    emit();
+  }, [emit]);
+
+  // === RIGHT: Gas / Reverse ===
   const handleGasStart = useCallback(() => {
     inputRef.current.gas = 1;
+    inputRef.current.brake = 0;
     emit();
   }, [emit]);
 
@@ -53,38 +56,50 @@ export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = fa
     emit();
   }, [emit]);
 
-  // Brake
-  const handleBrakeStart = useCallback(() => {
+  const handleReverseStart = useCallback(() => {
     inputRef.current.brake = 1;
+    inputRef.current.gas = 0;
     emit();
   }, [emit]);
 
-  const handleBrakeEnd = useCallback(() => {
+  const handleReverseEnd = useCallback(() => {
     inputRef.current.brake = 0;
     emit();
   }, [emit]);
 
-  // Nitro
+  // === NITRO ===
   const handleNitroPress = useCallback(() => {
     if (onNitroPress) onNitroPress();
   }, [onNitroPress]);
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* Left: Steering zone */}
-      <View
-        style={styles.steerZone}
-        onLayout={handleSteerLayout}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderMove={handleSteerMove}
-        onResponderRelease={handleSteerEnd}
-        onResponderTerminate={handleSteerEnd}
-      />
+      {/* LEFT: Steering arrows */}
+      <View style={styles.leftControls}>
+        <View
+          style={styles.arrowButton}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleLeftStart}
+          onResponderRelease={handleLeftEnd}
+          onResponderTerminate={handleLeftEnd}
+        >
+          <Text style={styles.arrowText}>◀</Text>
+        </View>
 
-      {/* Right side controls */}
+        <View
+          style={styles.arrowButton}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleRightStart}
+          onResponderRelease={handleRightEnd}
+          onResponderTerminate={handleRightEnd}
+        >
+          <Text style={styles.arrowText}>▶</Text>
+        </View>
+      </View>
+
+      {/* RIGHT: Gas/Reverse + Nitro */}
       <View style={styles.rightControls}>
-        {/* Nitro button (top) */}
+        {/* Nitro */}
         <View
           style={[styles.nitroButton, nitroAvailable && styles.nitroAvailable]}
           onStartShouldSetResponder={() => true}
@@ -93,23 +108,27 @@ export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = fa
           <Text style={styles.nitroText}>N₂O</Text>
         </View>
 
-        {/* Brake button (middle) */}
-        <View
-          style={styles.brakeButton}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleBrakeStart}
-          onResponderRelease={handleBrakeEnd}
-          onResponderTerminate={handleBrakeEnd}
-        />
-
-        {/* Gas button (bottom) */}
+        {/* Gas (up arrow) */}
         <View
           style={styles.gasButton}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleGasStart}
           onResponderRelease={handleGasEnd}
           onResponderTerminate={handleGasEnd}
-        />
+        >
+          <Text style={styles.arrowTextLarge}>▲</Text>
+        </View>
+
+        {/* Reverse/Brake (down arrow) */}
+        <View
+          style={styles.brakeButton}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleReverseStart}
+          onResponderRelease={handleReverseEnd}
+          onResponderTerminate={handleReverseEnd}
+        >
+          <Text style={styles.arrowTextLarge}>▼</Text>
+        </View>
       </View>
     </View>
   );
@@ -123,23 +142,45 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingBottom: 25,
   },
-  steerZone: {
-    flex: 1,
-  },
-  rightControls: {
-    width: 130,
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 20,
+  // Left: ← →
+  leftControls: {
+    flexDirection: 'row',
     gap: 12,
   },
+  arrowButton: {
+    width: 75,
+    height: 75,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  arrowText: {
+    fontSize: 28,
+    color: '#ffffff',
+  },
+  arrowTextLarge: {
+    fontSize: 32,
+    color: '#ffffff',
+  },
+  // Right: ↑ ↓ + N₂O
+  rightControls: {
+    alignItems: 'center',
+    gap: 10,
+  },
   nitroButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(0, 100, 200, 0.3)',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'rgba(0, 150, 255, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -150,23 +191,27 @@ const styles = StyleSheet.create({
   },
   nitroText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   gasButton: {
-    width: 85,
-    height: 85,
-    borderRadius: 42,
-    backgroundColor: 'rgba(0, 200, 0, 0.5)',
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 200, 0, 0.4)',
     borderWidth: 3,
-    borderColor: 'rgba(0, 255, 0, 0.8)',
+    borderColor: 'rgba(0, 255, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   brakeButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(200, 0, 0, 0.5)',
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: 'rgba(200, 0, 0, 0.4)',
     borderWidth: 3,
-    borderColor: 'rgba(255, 0, 0, 0.8)',
+    borderColor: 'rgba(255, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
