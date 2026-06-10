@@ -10,6 +10,7 @@ import { VehicleInput } from '../physics/vehicle';
 import { NetworkSync, PlayerState } from '../network/sync';
 import { useGameAudio } from '../audio/useGameAudio';
 import { GAME, NITRO, DRIFT, CHECKPOINT } from '../constants';
+import { MapId } from './MapSelectScreen';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Race'>;
 
@@ -22,7 +23,7 @@ const CHECKPOINTS = Array.from({ length: 8 }, (_, i) => {
 });
 
 export function RaceScreen({ navigation, route }: Props) {
-  const { mode } = route.params;
+  const { mode, map = 'coastal' } = route.params;
   const [input, setInput] = useState<VehicleInput>({ steer: 0, gas: 0, brake: 0 });
   const [speed, setSpeed] = useState(0);
   const [racePosition, setRacePosition] = useState(1);
@@ -205,7 +206,7 @@ export function RaceScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       {/* 3D Game Scene */}
-      <Scene input={input} onStateUpdate={handleStateUpdate} />
+      <Scene input={input} map={map} onStateUpdate={handleStateUpdate} />
 
       {/* Touch Controls */}
       <TouchControls

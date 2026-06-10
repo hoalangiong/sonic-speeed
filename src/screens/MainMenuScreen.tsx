@@ -27,7 +27,7 @@ export function MainMenuScreen({ navigation }: Props) {
 
         <TouchableOpacity
           style={[styles.button, styles.buttonSecondary]}
-          onPress={() => navigation.navigate('Race', { mode: 'solo' })}
+          onPress={() => navigation.navigate('MapSelect')}
         >
           <Text style={styles.buttonText}>FREE DRIVE</Text>
         </TouchableOpacity>
