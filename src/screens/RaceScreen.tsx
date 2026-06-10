@@ -216,6 +216,7 @@ export function RaceScreen({ navigation, route }: Props) {
       <TouchControls
         onInputChange={handleInputChange}
         onNitroPress={handleNitroPress}
+        onExitPress={() => navigation.goBack()}
         nitroAvailable={nitro >= NITRO.MIN_TO_ACTIVATE && !nitroActive}
       />
 
@@ -230,6 +231,7 @@ export function RaceScreen({ navigation, route }: Props) {
         driftScore={driftScore * driftMultiplier}
         driftMultiplier={driftMultiplier}
         isDrifting={isDrifting}
+        money={totalScore}
       />
 
       {/* Countdown overlay */}

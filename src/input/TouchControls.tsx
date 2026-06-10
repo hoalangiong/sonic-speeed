@@ -1,20 +1,21 @@
 import React, { useRef, useCallback } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { VehicleInput } from '../physics/vehicle';
 
 interface TouchControlsProps {
   onInputChange: (input: VehicleInput) => void;
   onNitroPress?: () => void;
+  onExitPress?: () => void;
   nitroAvailable?: boolean;
 }
 
 /**
- * D-Pad style controls:
- * LEFT SIDE: ← → arrows for steering
- * RIGHT SIDE: ↑ gas, ↓ reverse/brake
- * CENTER-RIGHT: N₂O nitro button
+ * Drive X style controls layout:
+ * LEFT TOP: ∧ ∨ (gas/reverse)
+ * LEFT BOTTOM: ◀ ▶ (steering)
+ * RIGHT: menu buttons + nitro
  */
-export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = false }: TouchControlsProps) {
+export function TouchControls({ onInputChange, onNitroPress, onExitPress, nitroAvailable = false }: TouchControlsProps) {
   const inputRef = useRef<VehicleInput>({ steer: 0, gas: 0, brake: 0, nitro: false });
   const onInputChangeRef = useRef(onInputChange);
   onInputChangeRef.current = onInputChange;
@@ -23,111 +24,116 @@ export function TouchControls({ onInputChange, onNitroPress, nitroAvailable = fa
     onInputChangeRef.current({ ...inputRef.current });
   }, []);
 
-  // === LEFT: Steering ===
-  const handleLeftStart = useCallback(() => {
-    inputRef.current.steer = -1;
-    emit();
-  }, [emit]);
-
-  const handleLeftEnd = useCallback(() => {
-    inputRef.current.steer = 0;
-    emit();
-  }, [emit]);
-
-  const handleRightStart = useCallback(() => {
-    inputRef.current.steer = 1;
-    emit();
-  }, [emit]);
-
-  const handleRightEnd = useCallback(() => {
-    inputRef.current.steer = 0;
-    emit();
-  }, [emit]);
-
-  // === RIGHT: Gas / Reverse ===
+  // Gas (up)
   const handleGasStart = useCallback(() => {
     inputRef.current.gas = 1;
     inputRef.current.brake = 0;
     emit();
   }, [emit]);
-
   const handleGasEnd = useCallback(() => {
     inputRef.current.gas = 0;
     emit();
   }, [emit]);
 
+  // Reverse (down)
   const handleReverseStart = useCallback(() => {
     inputRef.current.brake = 1;
     inputRef.current.gas = 0;
     emit();
   }, [emit]);
-
   const handleReverseEnd = useCallback(() => {
     inputRef.current.brake = 0;
     emit();
   }, [emit]);
 
-  // === NITRO ===
+  // Steer left
+  const handleLeftStart = useCallback(() => {
+    inputRef.current.steer = -1;
+    emit();
+  }, [emit]);
+  const handleLeftEnd = useCallback(() => {
+    inputRef.current.steer = 0;
+    emit();
+  }, [emit]);
+
+  // Steer right
+  const handleRightStart = useCallback(() => {
+    inputRef.current.steer = 1;
+    emit();
+  }, [emit]);
+  const handleRightEnd = useCallback(() => {
+    inputRef.current.steer = 0;
+    emit();
+  }, [emit]);
+
+  // Nitro
   const handleNitroPress = useCallback(() => {
     if (onNitroPress) onNitroPress();
   }, [onNitroPress]);
 
   return (
     <View style={styles.container} pointerEvents="box-none">
-      {/* LEFT: Steering arrows */}
-      <View style={styles.leftControls}>
-        <View
-          style={styles.arrowButton}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleLeftStart}
-          onResponderRelease={handleLeftEnd}
-          onResponderTerminate={handleLeftEnd}
-        >
-          <Text style={styles.arrowText}>◀</Text>
+      {/* === LEFT SIDE === */}
+      <View style={styles.leftSide}>
+        {/* Gas / Reverse — top left */}
+        <View style={styles.verticalButtons}>
+          <View
+            style={styles.btnDark}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleGasStart}
+            onResponderRelease={handleGasEnd}
+            onResponderTerminate={handleGasEnd}
+          >
+            <Text style={styles.chevron}>∧</Text>
+          </View>
+          <View
+            style={styles.btnDark}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleReverseStart}
+            onResponderRelease={handleReverseEnd}
+            onResponderTerminate={handleReverseEnd}
+          >
+            <Text style={styles.chevron}>∨</Text>
+          </View>
         </View>
 
-        <View
-          style={styles.arrowButton}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleRightStart}
-          onResponderRelease={handleRightEnd}
-          onResponderTerminate={handleRightEnd}
-        >
-          <Text style={styles.arrowText}>▶</Text>
+        {/* Exit button */}
+        <TouchableOpacity style={styles.exitButton} onPress={onExitPress}>
+          <Text style={styles.exitText}>THOÁT</Text>
+        </TouchableOpacity>
+
+        {/* Steering — bottom left */}
+        <View style={styles.steeringButtons}>
+          <View
+            style={styles.steerBtn}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleLeftStart}
+            onResponderRelease={handleLeftEnd}
+            onResponderTerminate={handleLeftEnd}
+          >
+            <Text style={styles.steerChevron}>❮</Text>
+          </View>
+          <View
+            style={styles.steerBtn}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={handleRightStart}
+            onResponderRelease={handleRightEnd}
+            onResponderTerminate={handleRightEnd}
+          >
+            <Text style={styles.steerChevron}>❯</Text>
+          </View>
         </View>
       </View>
 
-      {/* RIGHT: Gas/Reverse + Nitro */}
-      <View style={styles.rightControls}>
-        {/* Nitro */}
+      {/* === RIGHT SIDE === */}
+      <View style={styles.rightSide}>
+        {/* Nitro button */}
         <View
-          style={[styles.nitroButton, nitroAvailable && styles.nitroAvailable]}
+          style={[styles.nitroBtn, nitroAvailable && styles.nitroBtnActive]}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleNitroPress}
         >
-          <Text style={styles.nitroText}>N₂O</Text>
-        </View>
-
-        {/* Gas (up arrow) */}
-        <View
-          style={styles.gasButton}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleGasStart}
-          onResponderRelease={handleGasEnd}
-          onResponderTerminate={handleGasEnd}
-        >
-          <Text style={styles.arrowTextLarge}>▲</Text>
-        </View>
-
-        {/* Reverse/Brake (down arrow) */}
-        <View
-          style={styles.brakeButton}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleReverseStart}
-          onResponderRelease={handleReverseEnd}
-          onResponderTerminate={handleReverseEnd}
-        >
-          <Text style={styles.arrowTextLarge}>▼</Text>
+          <Text style={styles.nitroIcon}>⚡</Text>
         </View>
       </View>
     </View>
@@ -143,75 +149,84 @@ const styles = StyleSheet.create({
     bottom: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 25,
   },
-  // Left: ← →
-  leftControls: {
-    flexDirection: 'row',
-    gap: 12,
+  // Left side
+  leftSide: {
+    justifyContent: 'space-between',
+    paddingLeft: 15,
+    paddingVertical: 15,
   },
-  arrowButton: {
-    width: 75,
-    height: 75,
+  verticalButtons: {
+    gap: 8,
+  },
+  btnDark: {
+    width: 65,
+    height: 65,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    backgroundColor: 'rgba(30, 30, 40, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  arrowText: {
+  chevron: {
     fontSize: 28,
     color: '#ffffff',
+    fontWeight: 'bold',
   },
-  arrowTextLarge: {
-    fontSize: 32,
-    color: '#ffffff',
+  exitButton: {
+    backgroundColor: '#e63946',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
-  // Right: ↑ ↓ + N₂O
-  rightControls: {
-    alignItems: 'center',
+  exitText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
+  steeringButtons: {
+    flexDirection: 'row',
     gap: 10,
   },
-  nitroButton: {
+  steerBtn: {
+    width: 70,
+    height: 70,
+    borderRadius: 16,
+    backgroundColor: 'rgba(30, 30, 40, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  steerChevron: {
+    fontSize: 30,
+    color: '#f0c040',
+    fontWeight: 'bold',
+  },
+  // Right side
+  rightSide: {
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingRight: 15,
+    paddingBottom: 20,
+  },
+  nitroBtn: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(0, 100, 200, 0.3)',
+    backgroundColor: 'rgba(30, 30, 40, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 2,
     borderColor: 'rgba(0, 150, 255, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  nitroAvailable: {
-    backgroundColor: 'rgba(0, 150, 255, 0.6)',
-    borderColor: 'rgba(0, 200, 255, 1)',
+  nitroBtnActive: {
+    backgroundColor: 'rgba(0, 100, 255, 0.7)',
+    borderColor: '#00ccff',
   },
-  nitroText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  gasButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 200, 0, 0.4)',
-    borderWidth: 3,
-    borderColor: 'rgba(0, 255, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  brakeButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
-    backgroundColor: 'rgba(200, 0, 0, 0.4)',
-    borderWidth: 3,
-    borderColor: 'rgba(255, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  nitroIcon: {
+    fontSize: 24,
   },
 });
