@@ -99,15 +99,14 @@ function EnvironmentRenderer({ map }: { map: MapId }) {
     default:
       return (
         <>
-          <ambientLight intensity={0.3} color="#b4d7ff" />
-          <directionalLight position={[200, 60, -100]} intensity={1.8} color="#ffd599" castShadow />
-          <directionalLight position={[-50, 40, 50]} intensity={0.4} color="#88bbff" />
-          <hemisphereLight args={['#6fb4e0', '#c2956b', 0.4]} />
-          <pointLight position={[0, 10, -20]} intensity={0.5} color="#ffffff" distance={50} />
+          <ambientLight intensity={0.6} color="#ffffff" />
+          <directionalLight position={[100, 80, 50]} intensity={2} color="#fffde8" castShadow />
+          <directionalLight position={[-30, 40, -50]} intensity={0.6} color="#88ccff" />
+          <hemisphereLight args={['#88ccee', '#8fbc8f', 0.5]} />
           <Sky />
           <Sun />
           <Ocean />
-          <fog attach="fog" args={['#d4a574', 150, 500]} />
+          <fog attach="fog" args={['#aaccdd', 200, 600]} />
         </>
       );
   }

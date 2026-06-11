@@ -82,13 +82,13 @@ export function applyInput(vehicle: CANNON.RaycastVehicle, input: VehicleInput) 
   let brakeForce = 0;
 
   if (input.gas > 0) {
-    // Forward
-    engineForce = input.gas * PHYSICS.MAX_ENGINE_FORCE * forceMultiplier;
+    // Forward — negative force because Cannon-ES RaycastVehicle forward is -Z
+    engineForce = -input.gas * PHYSICS.MAX_ENGINE_FORCE * forceMultiplier;
     brakeForce = 0;
   } else if (input.brake > 0) {
     if (isReversing) {
-      // Reverse — apply negative engine force
-      engineForce = -input.brake * PHYSICS.MAX_ENGINE_FORCE * 0.4; // 40% power in reverse
+      // Reverse
+      engineForce = input.brake * PHYSICS.MAX_ENGINE_FORCE * 0.4;
       brakeForce = 0;
     } else {
       // Braking while moving forward
@@ -97,7 +97,9 @@ export function applyInput(vehicle: CANNON.RaycastVehicle, input: VehicleInput) 
     }
   }
 
-  // Apply engine force to rear wheels (RWD)
+  // Apply engine force to ALL wheels (AWD for better traction)
+  vehicle.applyEngineForce(engineForce, 0);
+  vehicle.applyEngineForce(engineForce, 1);
   vehicle.applyEngineForce(engineForce, 2);
   vehicle.applyEngineForce(engineForce, 3);
 

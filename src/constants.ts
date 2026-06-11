@@ -11,9 +11,9 @@ export const PHYSICS = {
   TIMESTEP: 1 / 60,
   MAX_SUBSTEPS: 3,
   // Vehicle
-  CHASSIS_MASS: 1500,
-  MAX_ENGINE_FORCE: 5000,
-  MAX_BRAKE_FORCE: 100,
+  CHASSIS_MASS: 1200,
+  MAX_ENGINE_FORCE: 8000,
+  MAX_BRAKE_FORCE: 150,
   MAX_STEER_ANGLE: 0.5,
   // Suspension
   SUSPENSION_STIFFNESS: 30,
@@ -24,7 +24,7 @@ export const PHYSICS = {
   // Wheels
   WHEEL_RADIUS: 0.35,
   WHEEL_WIDTH: 0.3,
-  FRICTION_SLIP: 2,
+  FRICTION_SLIP: 2.5,
 } as const;
 
 export const NITRO = {
@@ -48,10 +48,10 @@ export const CHECKPOINT = {
 } as const;
 
 export const CAMERA = {
-  OFFSET_BEHIND: 8,
-  OFFSET_ABOVE: 3,
-  LOOK_AHEAD: 5,
-  DAMPING: 0.05,
+  OFFSET_BEHIND: 6,
+  OFFSET_ABOVE: 2.5,
+  LOOK_AHEAD: 4,
+  DAMPING: 0.08,
 } as const;
 
 export const NETWORK = {
